@@ -7,6 +7,17 @@
 <title>Tüylü Mühendisler — Sıcaklık Kahramanları Merkezi</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#17283c;color:white;font-family:system-ui,-apple-system,Segoe UI,sans-serif}body{display:flex;flex-direction:column}.top{height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 12px;background:#102033}.title{font-size:14px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.book-area{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px 10px;touch-action:pan-y}.spread{display:flex;justify-content:center;align-items:center;max-width:100%;max-height:100%;filter:drop-shadow(0 8px 16px #0008)}.page{display:block;max-width:100%;max-height:calc(100dvh - 130px);object-fit:contain;aspect-ratio:1/1;background:#eee}.page[hidden]{display:none}.bottom{height:64px;display:flex;align-items:center;justify-content:center;gap:18px;padding:8px;background:#102033}button{border:0;border-radius:12px;background:#e7f0ff;color:#17283c;font-size:18px;min-width:48px;min-height:42px;cursor:pointer}button:disabled{opacity:.35}.count{min-width:90px;text-align:center;font-size:14px}.fullscreen{min-width:40px;font-size:16px}.back{font-size:13px;text-decoration:none;color:#e7f0ff;white-space:nowrap}@media(orientation:landscape){.top{height:36px}.bottom{height:44px;padding:3px}.book-area{padding:4px}.page{max-height:calc(100dvh - 88px)}button{min-height:34px}}
+
+/* Sayfa çevirme geçişi: mevcut sayfa eşleşmesini değiştirmez. */
+.spread{position:relative;perspective:1400px;transform-style:preserve-3d}
+.flip-sheet{position:absolute;z-index:5;top:0;bottom:0;width:50%;background:#eee;backface-visibility:hidden;transform-style:preserve-3d;pointer-events:none;overflow:hidden;box-shadow:0 2px 15px #0006}
+.flip-sheet img{height:100%;width:100%;object-fit:fill;display:block}
+.flip-sheet.forward{right:0;transform-origin:left center;animation:flipForward .52s ease-in forwards}
+.flip-sheet.backward{left:0;transform-origin:right center;animation:flipBackward .52s ease-in forwards}
+@keyframes flipForward{0%{transform:rotateY(0deg);filter:brightness(1)}48%{filter:brightness(.72)}100%{transform:rotateY(-180deg);filter:brightness(1)}}
+@keyframes flipBackward{0%{transform:rotateY(0deg);filter:brightness(1)}48%{filter:brightness(.72)}100%{transform:rotateY(180deg);filter:brightness(1)}}
+@media(orientation:portrait){.flip-sheet{width:100%}.flip-sheet.forward{left:0;right:auto}.flip-sheet.backward{left:0}}
+@media(prefers-reduced-motion:reduce){.flip-sheet{animation-duration:.01s}}
 </style>
 </head>
 <body>
@@ -20,6 +31,7 @@ const path=n=>'sayfalar/sayfa_'+String(n).padStart(2,'0')+'.jpg';
 const left=document.getElementById('left'),right=document.getElementById('right');
 const count=document.getElementById('count'),prev=document.getElementById('prev'),next=document.getElementById('next');
 let current=1;
+let turning=false;
 function wide(){return matchMedia('(orientation: landscape)').matches && innerWidth>innerHeight}
 function pages(){
  if(!wide())return [current];
@@ -45,10 +57,28 @@ function render(){
  [left,right].forEach(img=>img.onerror=()=>{img.alt='Görsel yüklenemedi: '+img.src});
 }
 function move(dir){
+ if(turning)return;
+ const before=pages();
+ const oldCurrent=current;
  if(!wide())current=Math.min(TOTAL,Math.max(1,current+dir));
  else if(dir>0){current=current===1?2:current===2?3:Math.min(35,current+2)}
  else{current=current<=2?1:current===3?2:Math.max(3,current-2)}
- render();
+ if(current===oldCurrent)return;
+ const oldPage=dir>0?before[before.length-1]:before[0];
+ const spread=document.getElementById('spread');
+ const animate=Number.isInteger(oldPage) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(animate){
+  turning=true;
+  const sheet=document.createElement('div');
+  sheet.className='flip-sheet '+(dir>0?'forward':'backward');
+  const img=document.createElement('img');
+  img.src=path(oldPage);img.alt='';sheet.appendChild(img);
+  // Geçiş boyunca eski sayfa yüzeyi yeni açılıma doğru döner.
+  render();spread.appendChild(sheet);
+  const finish=()=>{sheet.remove();turning=false};
+  sheet.addEventListener('animationend',finish,{once:true});
+  setTimeout(finish,750);
+ }else render();
 }
 prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));
 addEventListener('keydown',e=>{if(e.key==='ArrowRight')move(1);if(e.key==='ArrowLeft')move(-1)});
