@@ -1,0 +1,52 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Tüylü Mühendisler Askere Gidiyor</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at center,#42473e,#1c2523 80%);font-family:system-ui,Arial,sans-serif;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}header{text-align:center;padding:20px 10px 5px}h1{font-size:clamp(18px,3vw,28px);margin:0 0 5px}header p{opacity:.72;margin:0;font-size:13px}.stage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:20px 12px;overflow:hidden}.book{position:relative;width:min(92vw,1100px);aspect-ratio:1.667;perspective:2200px;filter:drop-shadow(0 14px 22px #0009)}.page{position:absolute;top:0;height:100%;width:50%;background:#f7eed9;overflow:hidden;box-shadow:inset 0 0 10px #0002}.page img{width:100%;height:100%;object-fit:fill;display:block}.left{left:0;border-radius:5px 0 0 5px}.right{right:0;border-radius:0 5px 5px 0}.coverOnly .left{visibility:hidden}.backCover .right{visibility:hidden}.backCover .left{box-shadow:0 8px 25px #0007}.coverOnly .right{box-shadow:0 8px 25px #0007}.seam{position:absolute;left:calc(50% - 2px);height:100%;width:4px;background:linear-gradient(90deg,#0002,#fff2,#0003);pointer-events:none}.flipper{position:absolute;left:50%;top:0;width:50%;height:100%;transform-origin:left center;transform-style:preserve-3d;z-index:5;transition:transform .7s cubic-bezier(.24,.68,.2,1);pointer-events:none;visibility:hidden}.flipper.turn{transform:rotateY(-180deg)}.face{position:absolute;inset:0;backface-visibility:hidden;overflow:hidden;background:#f6efdb}.face img{width:100%;height:100%}.face.back{transform:rotateY(180deg)}.controls{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 10px 23px;flex-wrap:wrap}button,a.pdf{border:1px solid #ffffff45;background:#ffffff17;color:white;border-radius:9px;padding:10px 16px;font:inherit;cursor:pointer;text-decoration:none}button:hover,a.pdf:hover{background:#ffffff2c}button:disabled{opacity:.3;cursor:default}#counter{min-width:100px;text-align:center;font-size:14px}.hint{font-size:12px;opacity:.6;text-align:center;padding-bottom:14px}@media(max-width:650px){.book{width:94vw;aspect-ratio:.834}.book .page{width:100%;left:0;right:auto}.book .left{display:none}.book .right{display:block}.book .seam{display:none}.flipper{display:none}.stage{padding:12px}.hint{padding:0 12px 15px}}
+
+/* Mobil: dikey ekranda tek sayfa, yatay ekranda çift sayfa. */
+@media (max-width: 850px) and (orientation: portrait){
+ body{min-height:100dvh}header{padding:10px 10px 2px}h1{font-size:17px}header p{font-size:11px}
+ .stage{min-height:0;padding:8px 8px;flex:1;align-items:center}
+ .book{width:min(96vw,calc((100dvh - 160px)*.834));aspect-ratio:.834;max-height:calc(100dvh - 160px);filter:drop-shadow(0 7px 13px #0009)}
+ .book .page{width:100%;left:0;right:auto;border-radius:5px;box-shadow:0 6px 16px #0005}
+ .book .left{display:none!important}.book .right{display:block!important;visibility:visible!important}
+ .book .seam,.book .flipper{display:none!important}
+ .controls{gap:8px;padding:6px 8px 10px;flex-wrap:nowrap}.controls button{padding:11px 9px;font-size:13px}
+ #counter{min-width:70px;font-size:12px}.hint{font-size:11px;padding:0 10px 8px}
+}
+@media (max-width: 850px) and (orientation: landscape){
+ body{min-height:100dvh}header{padding:3px}h1{font-size:14px}header p{display:none}
+ .stage{padding:3px;min-height:0}.book{width:min(92vw,calc((100dvh - 75px)*1.667));aspect-ratio:1.667}
+ .book .page{width:50%;display:block}.book .left{left:0;right:auto}.book .right{right:0;left:auto}
+ .book .seam{display:block}.book .flipper{display:block}
+ .controls{padding:2px 8px 5px;gap:8px}.controls button{padding:5px 12px;font-size:12px}.hint{display:none}
+}
+</style></head><body><header><h1>Tüylü Mühendisler Askere Gidiyor</h1><p>Mırmır ile Pati'nin macerası</p></header><div class="stage"><div id="book" class="book coverOnly"><div id="left" class="page left"></div><div id="right" class="page right"></div><div class="seam"></div><div id="flipper" class="flipper"><div class="face front" id="ff"></div><div class="face back" id="fb"></div></div></div></div><div class="controls"><button id="prev">← Önceki</button><span id="counter"></span><button id="next">Sonraki →</button><button id="full">⛶ Tam ekran</button></div><div class="hint">Sayfaları çevirmek için ok tuşlarını veya düğmeleri kullanın. Telefon dikeyken tek, yatayken karşılıklı sayfalar görünür. Parmağınızla kaydırabilirsiniz.</div><script>
+const N=36,files=Array.from({length:N},(_,i)=>'sayfalar/'+String(i+1).padStart(2,'0')+'.jpg');
+let spread=0,page=0,busy=false,mode='';
+const book=document.getElementById('book'),L=document.getElementById('left'),R=document.getElementById('right'),flip=document.getElementById('flipper');
+const prev=document.getElementById('prev'),next=document.getElementById('next'),counter=document.getElementById('counter');
+function img(i){return i>=0&&i<N?'<img draggable="false" src="'+files[i]+'" alt="Kitap sayfası '+(i+1)+'">':''}
+function indices(s){if(s===0)return[-1,0];if(s===18)return[35,-1];return[s*2-1,s*2]}
+function currentMode(){return innerWidth<=850&&matchMedia('(orientation: portrait)').matches?'single':'double'}
+function draw(){
+ const single=currentMode()==='single';book.classList.toggle('single',single);
+ if(single){L.innerHTML='';R.innerHTML=img(page);book.classList.remove('coverOnly','backCover');prev.disabled=page===0;next.disabled=page===35;
+ counter.textContent=page===0?'Ön kapak':page===35?'Arka kapak':page===2?'İthaf':page===34?'ii':(page>=3&&page<=32)?'Sayfa '+(page-2):'Sayfa '+(page+1)+' / 36';
+ }else{const [a,b]=indices(spread);L.innerHTML=img(a);R.innerHTML=img(b);book.classList.toggle('coverOnly',spread===0);book.classList.toggle('backCover',spread===18);
+ prev.disabled=spread===0;next.disabled=spread===18;counter.textContent=spread===0?'Ön kapak':spread===18?'Arka kapak':(a+1)+'–'+(b+1)+' / 36';}
+}
+function go(delta){
+ if(busy)return;
+ if(currentMode()==='single'){if(page+delta<0||page+delta>=N)return;page+=delta;spread=page===0?0:page===35?18:Math.ceil(page/2);draw();return}
+ if(spread+delta<0||spread+delta>18)return;
+ busy=true;flip.style.visibility='visible';const old=indices(spread),target=indices(spread+delta);
+ if(delta>0){document.getElementById('ff').innerHTML=img(old[1]);document.getElementById('fb').innerHTML=img(target[0]);R.innerHTML=img(target[1]);flip.style.left='50%';flip.style.transformOrigin='left center';flip.style.transform='rotateY(0deg)';flip.style.transition='none';flip.offsetHeight;flip.style.transition='transform .7s cubic-bezier(.24,.68,.2,1)';flip.style.transform='rotateY(-180deg)'}
+ else{document.getElementById('ff').innerHTML=img(target[1]);document.getElementById('fb').innerHTML=img(old[0]);L.innerHTML=img(target[0]);flip.style.left='50%';flip.style.transformOrigin='left center';flip.style.transition='none';flip.style.transform='rotateY(-180deg)';flip.offsetHeight;flip.style.transition='transform .7s cubic-bezier(.24,.68,.2,1)';flip.style.transform='rotateY(0deg)'}
+ setTimeout(()=>{spread+=delta;page=spread===0?0:spread===18?35:spread*2-1;flip.style.transition='none';flip.style.transform='rotateY(0deg)';document.getElementById('ff').innerHTML='';document.getElementById('fb').innerHTML='';flip.style.visibility='hidden';draw();busy=false},730)
+}
+prev.onclick=()=>go(-1);next.onclick=()=>go(1);
+document.getElementById('full').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1)});
+let x,y;book.addEventListener('touchstart',e=>{x=e.touches[0].clientX;y=e.touches[0].clientY},{passive:true});
+book.addEventListener('touchend',e=>{if(x===undefined)return;const dx=e.changedTouches[0].clientX-x,dy=e.changedTouches[0].clientY-y;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2)go(dx<0?1:-1);x=y=undefined},{passive:true});
+window.addEventListener('resize',()=>{const m=currentMode();if(m!==mode){if(m==='single'){page=spread===0?0:spread===18?35:spread*2-1}else{spread=page===0?0:page===35?18:Math.ceil(page/2)}mode=m}draw()});mode=currentMode();draw();
+</script></body></html>
